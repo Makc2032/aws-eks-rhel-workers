@@ -1,13 +1,13 @@
-# Running Red Hat Enterprise Linux 7.5 as EKS Worker Nodes
+# Running Red Hat Enterprise Linux 7.6 as EKS Worker Nodes
 
 ## Setup
-* Red Hat Enterprise Linux 7.5
+* Red Hat Enterprise Linux 7.6
 <img src="./images/aws-rhel.png"/>
 
-* Kubernetes 1.12.7 on AWS EKS
+* Kubernetes 1.13.7 on AWS EKS
 
 ## Workflow
-* Provision an EC2 Server with RHEL 7.5 AMI.
+* Provision an EC2 Server with RHEL 7.6 AMI.
 * Install the following dependencies.
 ```
 yum install -y git vim

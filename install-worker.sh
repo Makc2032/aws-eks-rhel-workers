@@ -5,15 +5,15 @@ set -o nounset
 #set -o errexit
 IFS=$'\n\t'
 
-TEMPLATE_DIR=${TEMPLATE_DIR:-./files}
+TEMPLATE_DIR="${TEMPLATE_DIR:-./files}"
 
-BINARY_BUCKET_NAME='amazon-eks'
-BINARY_BUCKET_REGION='us-west-2'
-AWS_ACCESS_KEY_ID=''
-KUBERNETES_BUILD_DATE='2020-04-16'
-CNI_VERSION='v0.6.0'
-CNI_PLUGIN_VERSION='v0.8.5'
-KUBERNETES_VERSION='1.16.8'
+export BINARY_BUCKET_NAME="amazon-eks"
+export BINARY_BUCKET_REGION="us-west-2"
+export AWS_ACCESS_KEY_ID=""
+export KUBERNETES_BUILD_DATE="2020-04-16"
+export CNI_VERSION="v0.6.0"
+export CNI_PLUGIN_VERSION="v0.8.5"
+export KUBERNETES_VERSION="1.16.8"
 
 MACHINE=$(uname -m)
 if [ "$MACHINE" == "x86_64" ]; then
@@ -53,7 +53,7 @@ cat <<EOF | sudo tee -a /etc/chrony.conf
 rtcsync
 EOF
 
-sudo pip3 install --upgrade \
+pip3 install --upgrade --user \
     pip \
     awscli \
     jq \
@@ -63,11 +63,11 @@ sudo pip3 install --upgrade \
     requests
 
 sudo sed -i 's/enforcing/permissive/g' /etc/selinux/config 
-echo 'export PATH=/usr/local/bin:$PATH' >>~/.bash_profile && . ~/.bash_profile
+echo 'export PATH=/usr/local/bin:\$\PATH' >>~/.bash_profile && . ~/.bash_profile
 
 sudo bash -c "/sbin/iptables-save > /etc/sysconfig/iptables"
 
-sudo cp -r $TEMPLATE_DIR/iptables-restore.service /etc/systemd/system/iptables-restore.service
+sudo cp -r "${TEMPLATE_DIR}"/iptables-restore.service /etc/systemd/system/iptables-restore.service
 
 sudo systemctl daemon-reload
 sudo systemctl enable iptables-restore ## FAILS
@@ -76,8 +76,8 @@ sudo systemctl enable iptables-restore ## FAILS
 wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz 
 sudo tar -xzvf aws-cfn-bootstrap-latest.tar.gz -C /opt
 pushd /opt/aws-cfn-bootstrap-1.4/
-    sudo python setup.py build
-    sudo python setup.py install
+    python3 setup.py build
+    python3 setup.py install
 popd
 sudo ln -s /usr/init/redhat/cfn-hup /etc/init.d/cfn-hup
 sudo chmod 775 /usr/init/redhat/cfn-hup
@@ -108,14 +108,14 @@ if [[ "$INSTALL_DOCKER" == "true" ]]; then
     containerd.io
 
     sudo mkdir -p /etc/docker
-    sudo cp -r $TEMPLATE_DIR/docker-daemon.json /etc/docker/daemon.json
+    sudo cp -r "${TEMPLATE_DIR}"/docker-daemon.json /etc/docker/daemon.json
     sudo chown root:root /etc/docker/daemon.json
 
     sudo systemctl daemon-reload
     sudo systemctl enable docker
 fi
 
-sudo cp -r $TEMPLATE_DIR/logrotate-kube-proxy /etc/logrotate.d/kube-proxy
+sudo cp -r "${TEMPLATE_DIR}"/logrotate-kube-proxy /etc/logrotate.d/kube-proxy
 sudo chown root:root /etc/logrotate.d/kube-proxy
 sudo mkdir -p /var/log/journal
 
@@ -150,7 +150,7 @@ BINARIES=(
     aws-iam-authenticator
 )
 for binary in ${BINARIES[*]} ; do
-    if [[ ! -z "$AWS_ACCESS_KEY_ID" ]]; then
+    if [[ ! -z "${AWS_ACCESS_KEY_ID}" ]]; then
         echo "AWS cli present - using it to copy binaries from s3."
         aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$binary .
         aws s3 cp --region $BINARY_BUCKET_REGION $S3_PATH/$binary.sha256 .
@@ -175,19 +175,19 @@ fi
 
 sudo mkdir -p /etc/kubernetes/kubelet
 sudo mkdir -p /etc/systemd/system/kubelet.service.d
-sudo cp -r $TEMPLATE_DIR/kubelet-kubeconfig /var/lib/kubelet/kubeconfig
+sudo cp -r "${TEMPLATE_DIR}"/kubelet-kubeconfig /var/lib/kubelet/kubeconfig
 sudo chown root:root /var/lib/kubelet/kubeconfig
-sudo cp -r $TEMPLATE_DIR/kubelet.service /etc/systemd/system/kubelet.service
+sudo cp -r "${TEMPLATE_DIR}"/kubelet.service /etc/systemd/system/kubelet.service
 sudo chown root:root /etc/systemd/system/kubelet.service
-sudo cp -r $TEMPLATE_DIR/$KUBELET_CONFIG /etc/kubernetes/kubelet/kubelet-config.json
+sudo cp -r "${TEMPLATE_DIR}"/$KUBELET_CONFIG /etc/kubernetes/kubelet/kubelet-config.json
 sudo chown root:root /etc/kubernetes/kubelet/kubelet-config.json
 
 sudo systemctl daemon-reload
 sudo systemctl disable kubelet
 
 sudo mkdir -p /etc/eks
-sudo cp -r $TEMPLATE_DIR/eni-max-pods.txt /etc/eks/eni-max-pods.txt
-sudo cp -r $TEMPLATE_DIR/bootstrap.sh /etc/eks/bootstrap.sh
+sudo cp -r "${TEMPLATE_DIR}"/eni-max-pods.txt /etc/eks/eni-max-pods.txt
+sudo cp -r "${TEMPLATE_DIR}"/bootstrap.sh /etc/eks/bootstrap.sh
 sudo chmod +x /etc/eks/bootstrap.sh
 
 BASE_AMI_ID=$(curl -s  http://169.254.169.254/latest/meta-data/ami-id)

@@ -11,7 +11,7 @@
 ** Example AMI: RHEL-7.7_HVM-20190923-x86_64-0-Hourly2-GP2 - ami-029c0fbe456d58bd1
 * Install the following dependencies.
 ```
-yum install -y git vim 
+sudo yum install -y git vim 
 ```
 * Clone this repo and Execute install-worker.sh
 ```

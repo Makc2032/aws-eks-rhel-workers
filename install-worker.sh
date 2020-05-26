@@ -15,6 +15,8 @@ export CNI_VERSION="v0.6.0"
 export CNI_PLUGIN_VERSION="v0.8.5"
 export KUBERNETES_VERSION="1.16.8"
 
+export PATH="/usr/local/bin:$PATH"
+
 MACHINE=$(uname -m)
 if [ "$MACHINE" == "x86_64" ]; then
     ARCH="amd64"
@@ -53,7 +55,7 @@ cat <<EOF | sudo tee -a /etc/chrony.conf
 rtcsync
 EOF
 
-pip3 install --upgrade --user \
+sudo pip3 install --upgrade \
     pip \
     awscli \
     jq \
@@ -63,7 +65,6 @@ pip3 install --upgrade --user \
     requests
 
 sudo sed -i 's/enforcing/permissive/g' /etc/selinux/config 
-echo 'export PATH=/usr/local/bin:\$\PATH' >>~/.bash_profile && . ~/.bash_profile
 
 sudo bash -c "/sbin/iptables-save > /etc/sysconfig/iptables"
 
@@ -76,8 +77,8 @@ sudo systemctl enable iptables-restore ## FAILS
 wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz 
 sudo tar -xzvf aws-cfn-bootstrap-latest.tar.gz -C /opt
 pushd /opt/aws-cfn-bootstrap-1.4/
-    python3 setup.py build
-    python3 setup.py install
+    sudo python setup.py build
+    sudo python setup.py install
 popd
 sudo ln -s /usr/init/redhat/cfn-hup /etc/init.d/cfn-hup
 sudo chmod 775 /usr/init/redhat/cfn-hup

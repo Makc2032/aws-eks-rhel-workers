@@ -5,10 +5,17 @@
 <img src="./images/aws-rhel.png"/>
  
 * Kubernetes 1.16.8 on AWS EKS
+* Target AMI: RHEL-7.7_HVM-20190923-x86_64-0-Hourly2-GP2 - ami-029c0fbe456d58bd1
+
+Using the following EKS / Kubernetes plugins:
+* KUBERNETES_BUILD_DATE="2020-04-16"
+* CNI_VERSION="v0.6.0"
+* CNI_PLUGIN_VERSION="v0.8.5"
+
+Change these values in install-worker.sh
 
 ## Workflow
 * Provision an EC2 Server with RHEL 7.7
-    * Example AMI: RHEL-7.7_HVM-20190923-x86_64-0-Hourly2-GP2 - ami-029c0fbe456d58bd1
 * Install the following dependencies.
 ```
 sudo yum install -y git vim 
@@ -37,3 +44,6 @@ sh install-worker.sh
 eksctl create nodegroup -f ./eksctl/cluster.yml
 ` 
 
+## Credit
+
+PowerUpCloud (https://github.com/powerupcloud) originated this code. This is just an update and adaptation for a more recent version of Kubernetes and EKS.

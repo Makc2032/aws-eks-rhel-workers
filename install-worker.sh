@@ -112,11 +112,12 @@ if [[ "$INSTALL_DOCKER" == "true" ]]; then
     sudo cp -r "${TEMPLATE_DIR}"/docker-daemon.json /etc/docker/daemon.json
     sudo chown root:root /etc/docker/daemon.json
 
+    sudo groupadd docker
+    sudo usermod -aG docker "${USER}"
     sudo systemctl daemon-reload
     sudo systemctl start docker
     sudo systemctl enable docker
     sudo chkconfig docker on
-    sudo usermod -aG docker "${USER}"
 fi
 
 sudo cp -r "${TEMPLATE_DIR}"/logrotate-kube-proxy /etc/logrotate.d/kube-proxy

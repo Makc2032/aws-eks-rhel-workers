@@ -8,7 +8,7 @@
 
 ## Workflow
 * Provision an EC2 Server with RHEL 7.7
-** Example AMI: RHEL-7.7_HVM-20190923-x86_64-0-Hourly2-GP2 - ami-029c0fbe456d58bd1
+    * Example AMI: RHEL-7.7_HVM-20190923-x86_64-0-Hourly2-GP2 - ami-029c0fbe456d58bd1
 * Install the following dependencies.
 ```
 sudo yum install -y git vim 

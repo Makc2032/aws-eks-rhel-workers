@@ -1,30 +1,49 @@
-# Running Red Hat Enterprise Linux 7.6 as EKS Worker Nodes
+# Running Red Hat Enterprise Linux 7.7 as EKS Worker Nodes
 
 ## Setup
-* Red Hat Enterprise Linux 7.6
+* Red Hat Enterprise Linux 7.7
 <img src="./images/aws-rhel.png"/>
+ 
+* Kubernetes 1.16.8 on AWS EKS
+* Target AMI: RHEL-7.7_HVM-20190923-x86_64-0-Hourly2-GP2 - ami-029c0fbe456d58bd1
 
-* Kubernetes 1.13.7 on AWS EKS
+Using the following EKS / Kubernetes plugins:
+* KUBERNETES_BUILD_DATE="2020-04-16"
+* CNI_VERSION="v0.6.0"
+* CNI_PLUGIN_VERSION="v0.8.5"
+
+Change these values in install-worker.sh
 
 ## Workflow
-* Provision an EC2 Server with RHEL 7.6 AMI.
+* Provision an EC2 Server with RHEL 7.7
 * Install the following dependencies.
 ```
-yum install -y git vim
-yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-yum install -y python-pip
-pip install --upgrade awscli
-yum install -y http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.68-1.el7.noarch.rpm
+sudo yum install -y git vim 
 ```
 * Clone this repo and Execute install-worker.sh
 ```
-git clone https://github.com/piu28/aws-eks-rhel-workers.git
+git clone https://github.com/codaglobal/aws-eks-rhel-workers.git
 cd aws-eks-rhel-workers
 sh install-worker.sh
 ```
 * Create an AMI of this server.
-* Provision a Cloudformation Stack with the below template provided by AWS:
-```
-https://amazon-eks.s3-us-west-2.amazonaws.com/cloudformation/2019-02-11/amazon-eks-nodegroup.yaml
-```
-* In the parameter "NodeImageId", input the Image ID of the AMI created in the previous step.
+* Update the included cluster.yml file with these parameter changes:
+  * "metadata" section:
+    *  "name" - name of the target EKS cluster
+    * "region" - region of the target EKS cluster
+  * "nodeGroups" section:
+    * "name" - desired name of the new nodegroup
+    * "NodeImageId" - Image ID of the AMI created in the previous step.
+    * "desiredCapacity" - desired number of nodes in the group
+    * "minSize" - minimum number of nodes in the group
+    * "maxSize" - input the minimum and maximum node group size
+    * "privateNetworking" - use private subnets for the nodes?
+    * "ssh" / "publicKeyPath" - local path to a public SSH key that will be used to create the nodes
+* Provision a CloudFormation stack for the cluster using the updated cluster.yml file:
+`
+eksctl create nodegroup -f ./eksctl/cluster.yml
+` 
+
+## Credit
+
+PowerUpCloud (https://github.com/powerupcloud) originated this code. This is just an update and adaptation for a more recent version of Kubernetes and EKS.

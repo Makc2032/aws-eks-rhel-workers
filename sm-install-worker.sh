@@ -7,6 +7,7 @@ IFS=$'\n\t'
 
 TEMPLATE_DIR="${TEMPLATE_DIR:-./files}"
 
+# Kubernetes Variables
 export BINARY_BUCKET_NAME="amazon-eks"
 export BINARY_BUCKET_REGION="us-west-2"
 export AWS_ACCESS_KEY_ID=""
@@ -14,6 +15,12 @@ export KUBERNETES_BUILD_DATE="2020-04-16"
 export CNI_VERSION="v0.6.0"
 export CNI_PLUGIN_VERSION="v0.8.5"
 export KUBERNETES_VERSION="1.16.8"
+
+# Subscription Manager Variables
+SM_ORG="${SM_ORG}"
+SM_KEY="${SM_KEY}"
+SM_USER="${SM_USER}"
+SM_PASS="${SM_PASS}"
 
 export PATH="/usr/local/bin:$PATH"
 
@@ -34,8 +41,33 @@ else
     echo "tsc as a clock source is not applicable, skipping."
 fi
 
+if [[ $(sudo subscription-manager status | grep Current) ]]; 
+then 
+    echo "Subscription manager is up to date. Moving on."; 
+else
+    sudo subscription-manager unregister
+    sudo subscription-manager clean
+    if [ ! -z "${SM_ORG}" ]; 
+    then
+        sudo subscription-manager register --force --org="${SM_ORG}" --activationkey="${SM_KEY}"
+    elif [ ! -z "${SM_USER}" ];
+    then         
+        sudo subscription-manager register --force --username "${SM_USER}" --password "${SM_PASS}"
+    else
+        echo "Subscription manager credentials not found. Please export some and try again."
+        exit 1;
+    fi
+    sudo subscription-manager attach --auto
+fi
+
+# Enable CareFirst RHEL satellite repositories
+sudo rpm -Uvh http://svl-satellite-p1.carefirst.com/pub/katello-ca-consumer-latest.noarch.rpm
+
+# Enable repos to support Docker installation
+sudo subscription-manager repos --enable "rhel-*-optional-rpms" --enable "rhel-*-extras-rpms"  --enable "rhel-ha-for-rhel-*-server-rpms"
+
 sudo yum update -y
-sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm 
+sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 sudo yum install -y \
     git \
     zip \
@@ -94,29 +126,23 @@ if [[ "$INSTALL_DOCKER" == "true" ]]; then
     lvm2
 
     # Install container-selinux.
-    sudo yum install -y \
-    http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.107-3.el7.noarch.rpm
+    sudo yum install -y container-selinux.noarch
 
-    # Set up Docker repository.
-    sudo yum-config-manager \
-    --add-repo \
-    https://download.docker.com/linux/centos/docker-ce.repo
-
-    # Install Docker CE and tools.
+    # Install Docker and tools.
     sudo yum install -y \
-    docker-ce \
-    docker-ce-cli \
-    containerd.io
+    docker \
+    device-mapper-libs \
+    device-mapper-event-libs
 
     sudo mkdir -p /etc/docker
     sudo cp -r "${TEMPLATE_DIR}"/docker-daemon.json /etc/docker/daemon.json
     sudo chown root:root /etc/docker/daemon.json
 
     sudo groupadd docker
-    for i in $(getent passwd {1000..60000} | cut -d: -f1); do sudo usermod -aG docker $i; done
+    for i in $(awk -F: '($3>=1000)&&($3<60000)&&($1!="nobody"){print $1}' /etc/passwd); do sudo usermod -aG docker $i; done
     sudo systemctl daemon-reload
-    sudo systemctl start docker
-    sudo systemctl enable docker
+    sudo systemctl start docker.service
+    sudo systemctl enable docker.service
     sudo chkconfig docker on
 fi
 

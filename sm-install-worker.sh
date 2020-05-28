@@ -17,10 +17,10 @@ export CNI_PLUGIN_VERSION="v0.8.5"
 export KUBERNETES_VERSION="1.16.8"
 
 # Subscription Manager Variables
-SM_ORG="${SM_ORG}"
-SM_KEY="${SM_KEY}"
-SM_USER="${SM_USER}"
-SM_PASS="${SM_PASS}"
+export SM_ORG="${SM_ORG:-null}"
+export SM_KEY="${SM_KEY:-null}"
+export SM_USER="${SM_USER:-null}"
+export SM_PASS="${SM_PASS:-null}"
 
 export PATH="/usr/local/bin:$PATH"
 
@@ -47,10 +47,10 @@ then
 else
     sudo subscription-manager unregister
     sudo subscription-manager clean
-    if [ ! -z "${SM_ORG}" ]; 
+    if [ "${SM_ORG}" != "null" ]; 
     then
         sudo subscription-manager register --force --org="${SM_ORG}" --activationkey="${SM_KEY}"
-    elif [ ! -z "${SM_USER}" ];
+    elif [ "${SM_USER}" != "null" ];
     then         
         sudo subscription-manager register --force --username "${SM_USER}" --password "${SM_PASS}"
     else
@@ -67,19 +67,19 @@ sudo rpm -Uvh http://svl-satellite-p1.carefirst.com/pub/katello-ca-consumer-late
 sudo subscription-manager repos --enable "rhel-*-optional-rpms" --enable "rhel-*-extras-rpms"  --enable "rhel-ha-for-rhel-*-server-rpms"
 
 sudo yum update -y
-sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 sudo yum install -y \
-    git \
-    zip \
-    unzip \
-    wget \
-    curl \
-    python3-pip \
-    chrony \
-    conntrack \
-    curl \
-    nfs-utils \
-    socat    
+git \
+zip \
+unzip \
+wget \
+curl \
+python3-pip \
+chrony \
+conntrack \
+curl \
+nfs-utils \
+socat    
 
 sudo chkconfig chronyd on
 

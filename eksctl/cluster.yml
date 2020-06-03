@@ -1,17 +1,36 @@
-apiVersion: eksctl.io/v1alpha5
+piVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: custom-ami
-  region: us-east-2
+  name: infra-test
+  region: us-east-1
 
 nodeGroups:
-  - name: rhel-1
-    ami: ami-092bf4a3ab2c2dd61
+  - name: rhel-worker-node2
+    ami: ami-0d7334e619d751e2c
+    tags:
+      Name: "rhel-worker-node2"
+      Owner: "Ginger.Mann@carefirst.com"
+      Environment: "nonprod"
+      CostCenter: "Nexus - 004PH"
+      Function: "eks-cluster"
+      DataClass: "private"
+      DataAccess: "Admin"
+      ManagedBy: "cloudformation"
+
     instanceType: t3.large
-    desiredCapacity: 1
+    desiredCapacity: 3
     minSize: 1
-    maxSize: 3
-    privateNetworking: false
+    maxSize: 4
+    volumeSize: 20
+    VolumeType: gp2
+
+    preBootstrapCommands:
+      # allow docker registries to be deployed as cluster service
+      - 'echo {\"insecure-registries\": [\"svl-artfct-p1.carefirst.com:8081\"]} >> /etc/docker/daemon.json'
+      - 'echo \"10.17.24.57 svl-artfct-p1.carefirst.com  svl-artfct-p1\" >> /etc/hosts'
+      - "systemctl restart docker"
+
+    privateNetworking: true
     ssh:
-      publicKeyPath: ~/.ssh/id_rsa.pub
+      publicKeyName: non-prod

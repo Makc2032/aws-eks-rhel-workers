@@ -19,10 +19,11 @@ export PATH="/usr/local/bin:$PATH"
 
 MACHINE=$(uname -m)
 if [ "$MACHINE" == "x86_64" ]; then
-    ARCH="amd64"
-    OS="linux"
+    export ARCH="amd64"
+    export OS="linux"
 elif [ "$MACHINE" == "aarch64" ]; then
-    ARCH="arm64"
+    export ARCH="arm64"
+    export OS="linux"
 else
     echo "Unknown machine architecture '$MACHINE'" >&2
     exit 1

@@ -41,6 +41,9 @@ else
     echo "tsc as a clock source is not applicable, skipping."
 fi
 
+# Enable CareFirst RHEL satellite repositories
+sudo rpm -Uvh http://svl-satellite-p1.carefirst.com/pub/katello-ca-consumer-latest.noarch.rpm
+
 if [[ $(sudo subscription-manager status | grep Current) ]]; 
 then 
     echo "Subscription manager is up to date. Moving on."; 
@@ -57,17 +60,11 @@ else
         echo "Subscription manager credentials not found. Please export some and try again."
         exit 1;
     fi
-    sudo subscription-manager attach --auto
 fi
 
-# Enable CareFirst RHEL satellite repositories
-sudo rpm -Uvh http://svl-satellite-p1.carefirst.com/pub/katello-ca-consumer-latest.noarch.rpm
-
-# Enable repos to support Docker installation
-sudo subscription-manager repos --enable "rhel-*-optional-rpms" --enable "rhel-*-extras-rpms"  --enable "rhel-ha-for-rhel-*-server-rpms"
-
-sudo yum update -y
+sudo subscription-manager repos --enable=*
 sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+sudo yum update -y
 sudo yum install -y \
 git \
 zip \
@@ -118,8 +115,30 @@ sudo mkdir -p /opt/aws/bin
 sudo ln -s /usr/bin/cfn-hup /opt/aws/bin/cfn-hup
 sudo ln -s /usr/bin/cfn-signal /opt/aws/bin/cfn-signal
 
+# Handle AWS SSM
+sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+sudo systemctl daemon-reload
+sudo systemctl enable amazon-ssm-agent
+sudo systemctl restart amazon-ssm-agent
+
 INSTALL_DOCKER="${INSTALL_DOCKER:-true}"
 if [[ "$INSTALL_DOCKER" == "true" ]]; then
+    # Remove any previous Docker verions
+    sudo yum remove -y docker \
+        docker-client \
+        docker-client-latest \
+        docker-common \
+        docker-latest \
+        docker-latest-logrotate \
+        docker-logrotate \
+        docker-engine \
+        docker \
+        docker-ce \
+        docker-ce-cli \
+        containerd.io \
+        device-mapper-persistent-data \
+        lvm2
+
     # Install required packages.
     sudo yum install -y yum-utils \
     device-mapper-persistent-data \
@@ -128,14 +147,30 @@ if [[ "$INSTALL_DOCKER" == "true" ]]; then
     # Install container-selinux.
     sudo yum install -y container-selinux.noarch
 
-    # Install Docker and tools.
+    # Installing natively from RHEL fetches a conflicting Docker release
+    # sudo yum install -y \
+    # docker \
+    # device-mapper-libs \
+    # device-mapper-event-libs
+
+    # Set up Docker CE repository.
+    sudo yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
+
+    # Install Docker CE and tools.
     sudo yum install -y \
-    docker \
-    device-mapper-libs \
-    device-mapper-event-libs
+    docker-ce \
+    docker-ce-cli \
+    containerd.io
 
     sudo mkdir -p /etc/docker
-    sudo cp -r "${TEMPLATE_DIR}"/docker-daemon.json /etc/docker/daemon.json
+    if [ "$SM_ORG" == "carefirstbcbs" ]; then
+        sudo cp -r "${TEMPLATE_DIR}"/docker-daemon-carefirst.json /etc/docker/daemon.json
+        sudo echo "10.17.24.57 svl-artfct-p1.carefirst.com  svl-artfct-p1" >> /etc/hosts
+    else
+        sudo cp -r "${TEMPLATE_DIR}"/docker-daemon.json /etc/docker/daemon.json
+    fi
     sudo chown root:root /etc/docker/daemon.json
 
     sudo groupadd docker
@@ -204,17 +239,17 @@ else
     KUBELET_CONFIG=kubelet-config-with-secret-polling.json
 fi
 
-sudo mkdir -p /etc/kubernetes/kubelet
-sudo mkdir -p /etc/systemd/system/kubelet.service.d
-sudo cp -r "${TEMPLATE_DIR}"/kubelet-kubeconfig /var/lib/kubelet/kubeconfig
-sudo chown root:root /var/lib/kubelet/kubeconfig
-sudo cp -r "${TEMPLATE_DIR}"/kubelet.service /etc/systemd/system/kubelet.service
-sudo chown root:root /etc/systemd/system/kubelet.service
-sudo cp -r "${TEMPLATE_DIR}"/$KUBELET_CONFIG /etc/kubernetes/kubelet/kubelet-config.json
-sudo chown root:root /etc/kubernetes/kubelet/kubelet-config.json
+    sudo mkdir -p /etc/kubernetes/kubelet
+    sudo mkdir -p /etc/systemd/system/kubelet.service.d
+    sudo cp -r "${TEMPLATE_DIR}"/kubelet-kubeconfig /var/lib/kubelet/kubeconfig
+    sudo chown root:root /var/lib/kubelet/kubeconfig
+    sudo cp -r "${TEMPLATE_DIR}"/kubelet.service /etc/systemd/system/kubelet.service
+    sudo chown root:root /etc/systemd/system/kubelet.service
+    sudo cp -r "${TEMPLATE_DIR}"/$KUBELET_CONFIG /etc/kubernetes/kubelet/kubelet-config.json
+    sudo chown root:root /etc/kubernetes/kubelet/kubelet-config.json
 
 sudo systemctl daemon-reload
-sudo systemctl disable kubelet
+sudo systemctl disable kubelet 
 
 sudo mkdir -p /etc/eks
 sudo cp -r "${TEMPLATE_DIR}"/eni-max-pods.txt /etc/eks/eni-max-pods.txt

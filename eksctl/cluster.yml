@@ -25,12 +25,6 @@ nodeGroups:
     volumeSize: 20
     VolumeType: gp2
 
-    preBootstrapCommands:
-      # allow docker registries to be deployed as cluster service
-      - 'echo {\"insecure-registries\": [\"svl-artfct-p1.carefirst.com:8081\"]} >> /etc/docker/daemon.json'
-      - 'echo \"10.17.24.57 svl-artfct-p1.carefirst.com  svl-artfct-p1\" >> /etc/hosts'
-      - "systemctl restart docker"
-
     privateNetworking: true
     ssh:
       publicKeyName: non-prod

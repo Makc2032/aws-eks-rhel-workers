@@ -89,6 +89,22 @@ sudo ln -s /usr/bin/cfn-signal /opt/aws/bin/cfn-signal
 
 INSTALL_DOCKER="${INSTALL_DOCKER:-true}"
 if [[ "$INSTALL_DOCKER" == "true" ]]; then
+    # Remove any previous Docker verions
+    sudo yum remove -y docker \
+        docker-client \
+        docker-client-latest \
+        docker-common \
+        docker-latest \
+        docker-latest-logrotate \
+        docker-logrotate \
+        docker-engine \
+        docker \
+        docker-ce \
+        docker-ce-cli \
+        containerd.io \
+        device-mapper-persistent-data \
+        lvm2
+
     # Install required packages.
     sudo yum install -y yum-utils \
     device-mapper-persistent-data \
@@ -114,7 +130,7 @@ if [[ "$INSTALL_DOCKER" == "true" ]]; then
     sudo chown root:root /etc/docker/daemon.json
 
     sudo groupadd docker
-    for i in $(getent passwd {1000..60000} | cut -d: -f1); do sudo usermod -aG docker $i; done
+    for i in $(awk -F: '($3>=1000)&&($3<60000)&&($1!="nobody"){print $1}' /etc/passwd); do sudo usermod -aG docker $i; done
     sudo systemctl daemon-reload
     sudo systemctl start docker
     sudo systemctl enable docker

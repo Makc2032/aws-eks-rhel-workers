@@ -7,6 +7,7 @@ IFS=$'\n\t'
 
 TEMPLATE_DIR="${TEMPLATE_DIR:-./files}"
 
+# Kubernetes Variables
 export BINARY_BUCKET_NAME="amazon-eks"
 export BINARY_BUCKET_REGION="us-west-2"
 export AWS_ACCESS_KEY_ID=""
@@ -15,16 +16,21 @@ export CNI_VERSION="v0.6.0"
 export CNI_PLUGIN_VERSION="v0.8.5"
 export KUBERNETES_VERSION="1.16.8"
 
+# Subscription Manager Variables
+export SM_ORG="${SM_ORG:-null}"
+export SM_KEY="${SM_KEY:-null}"
+export SM_USER="${SM_USER:-null}"
+export SM_PASS="${SM_PASS:-null}"
 export DKR_INSECURE="${DKR_INSECURE:-null}"
+
 export PATH="/usr/local/bin:$PATH"
 
 MACHINE=$(uname -m)
 if [ "$MACHINE" == "x86_64" ]; then
-    export ARCH="amd64"
-    export OS="linux"
+    ARCH="amd64"
+    OS="linux"
 elif [ "$MACHINE" == "aarch64" ]; then
-    export ARCH="arm64"
-    export OS="linux"
+    ARCH="arm64"
 else
     echo "Unknown machine architecture '$MACHINE'" >&2
     exit 1
@@ -36,20 +42,42 @@ else
     echo "tsc as a clock source is not applicable, skipping."
 fi
 
+# Enable CareFirst RHEL satellite repositories
+sudo rpm -Uvh http://svl-satellite-p1.carefirst.com/pub/katello-ca-consumer-latest.noarch.rpm
+
+if [[ $(sudo subscription-manager status | grep Current) ]]; 
+then 
+    echo "Subscription manager is up to date. Moving on."; 
+else
+    sudo subscription-manager unregister
+    sudo subscription-manager clean
+    if [ "${SM_ORG}" != "null" ]; 
+    then
+        sudo subscription-manager register --force --org="${SM_ORG}" --activationkey="${SM_KEY}"
+    elif [ "${SM_USER}" != "null" ];
+    then         
+        sudo subscription-manager register --force --username "${SM_USER}" --password "${SM_PASS}"
+    else
+        echo "Subscription manager credentials not found. Please export some and try again."
+        exit 1;
+    fi
+fi
+
+sudo subscription-manager repos --enable=*
+sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 sudo yum update -y
-sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm 
 sudo yum install -y \
-    git \
-    zip \
-    unzip \
-    wget \
-    curl \
-    python3-pip \
-    chrony \
-    conntrack \
-    curl \
-    nfs-utils \
-    socat    
+git \
+zip \
+unzip \
+wget \
+curl \
+python3-pip \
+chrony \
+conntrack \
+curl \
+nfs-utils \
+socat    
 
 sudo chkconfig chronyd on
 
@@ -88,6 +116,12 @@ sudo mkdir -p /opt/aws/bin
 sudo ln -s /usr/bin/cfn-hup /opt/aws/bin/cfn-hup
 sudo ln -s /usr/bin/cfn-signal /opt/aws/bin/cfn-signal
 
+# Handle AWS SSM
+sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+sudo systemctl daemon-reload
+sudo systemctl enable amazon-ssm-agent
+sudo systemctl restart amazon-ssm-agent
+
 INSTALL_DOCKER="${INSTALL_DOCKER:-true}"
 if [[ "$INSTALL_DOCKER" == "true" ]]; then
     # Remove any previous Docker verions
@@ -112,10 +146,9 @@ if [[ "$INSTALL_DOCKER" == "true" ]]; then
     lvm2
 
     # Install container-selinux.
-    sudo yum install -y \
-    http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.107-3.el7.noarch.rpm
+    sudo yum install -y container-selinux.noarch
 
-    # Set up Docker repository.
+    # Set up Docker CE repository.
     sudo yum-config-manager \
     --add-repo \
     https://download.docker.com/linux/centos/docker-ce.repo
@@ -127,14 +160,24 @@ if [[ "$INSTALL_DOCKER" == "true" ]]; then
     containerd.io
 
     sudo mkdir -p /etc/docker
+
+    # Handle /etc/docker/daemon.json
     sudo cp -r "${TEMPLATE_DIR}"/docker-daemon.json /etc/docker/daemon.json
     sudo chown root:root /etc/docker/daemon.json
+
+    if [ "${DKR_INSECURE}" != "null" ]; 
+    then
+        sudo sed -i "s/\"max-concurrent-downloads\": 10/\"max-concurrent-downloads\": 10\,/" /etc/docker/daemon.json
+        sudo sed -n -i "p;9a \"insecure-registries\" : [\"${DKR_INSECURE}\"]" /etc/docker/daemon.json
+        echo "Docker daemon updated with insecure registries:"
+        cat /etc/docker/daemon.json
+    fi
 
     sudo groupadd docker
     for i in $(awk -F: '($3>=1000)&&($3<60000)&&($1!="nobody"){print $1}' /etc/passwd); do sudo usermod -aG docker $i; done
     sudo systemctl daemon-reload
-    sudo systemctl start docker
-    sudo systemctl enable docker
+    sudo systemctl start docker.service
+    sudo systemctl enable docker.service
     sudo chkconfig docker on
 fi
 
@@ -196,17 +239,17 @@ else
     KUBELET_CONFIG=kubelet-config-with-secret-polling.json
 fi
 
-sudo mkdir -p /etc/kubernetes/kubelet
-sudo mkdir -p /etc/systemd/system/kubelet.service.d
-sudo cp -r "${TEMPLATE_DIR}"/kubelet-kubeconfig /var/lib/kubelet/kubeconfig
-sudo chown root:root /var/lib/kubelet/kubeconfig
-sudo cp -r "${TEMPLATE_DIR}"/kubelet.service /etc/systemd/system/kubelet.service
-sudo chown root:root /etc/systemd/system/kubelet.service
-sudo cp -r "${TEMPLATE_DIR}"/$KUBELET_CONFIG /etc/kubernetes/kubelet/kubelet-config.json
-sudo chown root:root /etc/kubernetes/kubelet/kubelet-config.json
+    sudo mkdir -p /etc/kubernetes/kubelet
+    sudo mkdir -p /etc/systemd/system/kubelet.service.d
+    sudo cp -r "${TEMPLATE_DIR}"/kubelet-kubeconfig /var/lib/kubelet/kubeconfig
+    sudo chown root:root /var/lib/kubelet/kubeconfig
+    sudo cp -r "${TEMPLATE_DIR}"/kubelet.service /etc/systemd/system/kubelet.service
+    sudo chown root:root /etc/systemd/system/kubelet.service
+    sudo cp -r "${TEMPLATE_DIR}"/$KUBELET_CONFIG /etc/kubernetes/kubelet/kubelet-config.json
+    sudo chown root:root /etc/kubernetes/kubelet/kubelet-config.json
 
 sudo systemctl daemon-reload
-sudo systemctl disable kubelet
+sudo systemctl disable kubelet 
 
 sudo mkdir -p /etc/eks
 sudo cp -r "${TEMPLATE_DIR}"/eni-max-pods.txt /etc/eks/eni-max-pods.txt

@@ -2,16 +2,57 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: custom-ami
-  region: us-east-2
+  name: test-cluster
+  region: us-east-1
 
 nodeGroups:
-  - name: rhel-1
-    ami: ami-092bf4a3ab2c2dd61
-    instanceType: t3.large
-    desiredCapacity: 1
-    minSize: 1
-    maxSize: 3
-    privateNetworking: false
-    ssh:
-      publicKeyPath: ~/.ssh/id_rsa.pub
+  - name: rhel-worker-node
+    ami: ami-1234567890abcdef1
+    minSize: 2
+    desiredCapacity: 3
+    maxSize: 4
+    privateNetworking: true
+    availabilityZones: ["us-east-1a", "us-east-1b", "us-east-1c"]
+    volumeSize: 20
+    preBootstrapCommands:
+      # run shell scripts on instances as they are created
+      - "echo 'enter any command in YAML list format'"
+      - "systemctl restart docker"
+    ssh: # use existing EC2 key but don't allow SSH access to nodegroup.
+      publicKeyName: nonprod
+      allow: false
+      # new feature for restricting SSH access to certain AWS security group IDs
+      sourceSecurityGroupIds: ["sg-1234567890abcdef1"]
+      labels: {role: worker}
+    tags:
+      nodegroup-role: worker
+      Name: "rhel-worker-node"
+      Owner: "Someone's Name"
+      Environment: "someenv"
+      CostCenter: "Company Dept"
+      Function: "eks-cluster"
+      DataClass: "private"
+      DataAccess: "Admin"
+      ManagedBy: "cloudformation"
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/cluster-13: "owned"
+    iam:
+      attachPolicyARNs:
+      - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+      - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+      - arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess
+      - arn:aws:iam::aws:policy/CloudWatchFullAccess
+      - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+      - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
+      - arn:aws:iam::aws:policy/AmazonSSMAutomationApproverAccess
+      - arn:aws:iam::aws:policy/service-role/AmazonSSMAutomationRole
+      withAddonPolicies:
+        externalDNS: true
+        certManager: true
+        albIngress: true
+cloudWatch:
+    clusterLogging:
+        # enable specific types of cluster control plane logs
+        enableTypes: ["all"]
+        # all supported types: "api", "audit", "authenticator", "controllerManager", "scheduler"
+        # supported special values: "*" and "all"

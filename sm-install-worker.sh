@@ -21,6 +21,7 @@ export SM_ORG="${SM_ORG:-null}"
 export SM_KEY="${SM_KEY:-null}"
 export SM_USER="${SM_USER:-null}"
 export SM_PASS="${SM_PASS:-null}"
+export DKR_INSECURE="${DKR_INSECURE:-null}"
 
 export PATH="/usr/local/bin:$PATH"
 
@@ -147,12 +148,6 @@ if [[ "$INSTALL_DOCKER" == "true" ]]; then
     # Install container-selinux.
     sudo yum install -y container-selinux.noarch
 
-    # Installing natively from RHEL fetches a conflicting Docker release
-    # sudo yum install -y \
-    # docker \
-    # device-mapper-libs \
-    # device-mapper-event-libs
-
     # Set up Docker CE repository.
     sudo yum-config-manager \
     --add-repo \
@@ -165,13 +160,16 @@ if [[ "$INSTALL_DOCKER" == "true" ]]; then
     containerd.io
 
     sudo mkdir -p /etc/docker
-    if [ "$SM_ORG" == "carefirstbcbs" ]; then
-        sudo cp -r "${TEMPLATE_DIR}"/docker-daemon-carefirst.json /etc/docker/daemon.json
-        sudo echo "10.17.24.57 svl-artfct-p1.carefirst.com  svl-artfct-p1" >> /etc/hosts
-    else
-        sudo cp -r "${TEMPLATE_DIR}"/docker-daemon.json /etc/docker/daemon.json
-    fi
+
+    # Handle /etc/docker/daemon.json
+    sudo cp -r "${TEMPLATE_DIR}"/docker-daemon.json /etc/docker/daemon.json
     sudo chown root:root /etc/docker/daemon.json
+
+    if [ "${DKR_INSECURE}" != "null" ]; 
+    then
+        sudo sed -i "s/\"max-concurrent-downloads\": 10/\"max-concurrent-downloads\": 10\,/" /etc/docker/daemon.json
+        sudo sed -n -i "p;9a \"insecure-registries\" : [\"${DKR_INSECURE}\"]" /etc/docker/daemon.json
+    fi
 
     sudo groupadd docker
     for i in $(awk -F: '($3>=1000)&&($3<60000)&&($1!="nobody"){print $1}' /etc/passwd); do sudo usermod -aG docker $i; done

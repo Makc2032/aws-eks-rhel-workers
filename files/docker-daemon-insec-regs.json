@@ -7,5 +7,5 @@
     },
     "live-restore": true,
     "max-concurrent-downloads": 10,
-  "insecure-registries" : ["svl-artfct-p1.carefirst.com:8081"]
+  "insecure-registries" : ["$DKR_INSECURE"]
   }

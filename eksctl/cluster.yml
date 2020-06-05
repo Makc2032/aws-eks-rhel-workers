@@ -1,4 +1,4 @@
-piVersion: eksctl.io/v1alpha5
+apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
@@ -6,9 +6,26 @@ metadata:
   region: us-east-1
 
 nodeGroups:
-  - name: rhel-worker-node2
-    ami: ami-0d7334e619d751e2c
+  - name: rhel-worker-node
+    ami: ami-053a35517d4519c72
+    minSize: 2
+    desiredCapacity: 3
+    maxSize: 4
+    privateNetworking: true
+    availabilityZones: ["us-east-1a", "us-east-1b", "us-east-1c"]
+    volumeSize: 20
+    preBootstrapCommands:
+      # allow docker registries to be deployed as cluster service
+      - 'echo "10.17.24.57 svl-artfct-p1.carefirst.com  svl-artfct-p1" >> /etc/hosts'
+      - "systemctl restart docker"
+    ssh: # use existing EC2 key but don't allow SSH access to nodegroup.
+      publicKeyName: nonprod
+      allow: false
+      # new feature for restricting SSH access to certain AWS security group IDs
+      # sourceSecurityGroupIds: ["sg-008a114ec9b10fe90"]
+    labels: {role: worker}
     tags:
+      nodegroup-role: worker
       Name: "rhel-worker-node2"
       Owner: "Ginger.Mann@carefirst.com"
       Environment: "nonprod"
@@ -17,14 +34,25 @@ nodeGroups:
       DataClass: "private"
       DataAccess: "Admin"
       ManagedBy: "cloudformation"
-
-    instanceType: t3.large
-    desiredCapacity: 3
-    minSize: 1
-    maxSize: 4
-    volumeSize: 20
-    VolumeType: gp2
-
-    privateNetworking: true
-    ssh:
-      publicKeyName: non-prod
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/cluster-13: "owned"
+    iam:
+      attachPolicyARNs:
+      - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+      - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+      - arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess
+      - arn:aws:iam::aws:policy/CloudWatchFullAccess
+      - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+      - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
+      - arn:aws:iam::aws:policy/AmazonSSMAutomationApproverAccess
+      - arn:aws:iam::aws:policy/service-role/AmazonSSMAutomationRole
+      withAddonPolicies:
+        externalDNS: true
+        certManager: true
+        albIngress: true
+cloudWatch:
+    clusterLogging:
+        # enable specific types of cluster control plane logs
+        enableTypes: ["all"]
+        # all supported types: "api", "audit", "authenticator", "controllerManager", "scheduler"
+        # supported special values: "*" and "all"

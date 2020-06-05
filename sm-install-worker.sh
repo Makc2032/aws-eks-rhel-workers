@@ -169,6 +169,8 @@ if [[ "$INSTALL_DOCKER" == "true" ]]; then
     then
         sudo sed -i "s/\"max-concurrent-downloads\": 10/\"max-concurrent-downloads\": 10\,/" /etc/docker/daemon.json
         sudo sed -n -i "p;9a \"insecure-registries\" : [\"${DKR_INSECURE}\"]" /etc/docker/daemon.json
+        echo "Docker daemon updated with insecure registries:"
+        cat /etc/docker/daemon.json
     fi
 
     sudo groupadd docker

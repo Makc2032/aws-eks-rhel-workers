@@ -2,12 +2,12 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: infra-test
+  name: test-cluster
   region: us-east-1
 
 nodeGroups:
   - name: rhel-worker-node
-    ami: ami-053a35517d4519c72
+    ami: ami-1234567890abcdef1
     minSize: 2
     desiredCapacity: 3
     maxSize: 4
@@ -15,21 +15,21 @@ nodeGroups:
     availabilityZones: ["us-east-1a", "us-east-1b", "us-east-1c"]
     volumeSize: 20
     preBootstrapCommands:
-      # allow docker registries to be deployed as cluster service
-      - 'echo "10.17.24.57 svl-artfct-p1.carefirst.com  svl-artfct-p1" >> /etc/hosts'
+      # run shell scripts on instances as they are created
+      - "echo 'enter any command in YAML list format'"
       - "systemctl restart docker"
     ssh: # use existing EC2 key but don't allow SSH access to nodegroup.
       publicKeyName: nonprod
       allow: false
       # new feature for restricting SSH access to certain AWS security group IDs
-      # sourceSecurityGroupIds: ["sg-008a114ec9b10fe90"]
-    labels: {role: worker}
+      sourceSecurityGroupIds: ["sg-1234567890abcdef1"]
+      labels: {role: worker}
     tags:
       nodegroup-role: worker
-      Name: "rhel-worker-node2"
-      Owner: "Ginger.Mann@carefirst.com"
-      Environment: "nonprod"
-      CostCenter: "Nexus - 004PH"
+      Name: "rhel-worker-node"
+      Owner: "Someone's Name"
+      Environment: "someenv"
+      CostCenter: "Company Dept"
       Function: "eks-cluster"
       DataClass: "private"
       DataAccess: "Admin"

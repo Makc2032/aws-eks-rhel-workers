@@ -15,6 +15,7 @@ export CNI_VERSION="v0.6.0"
 export CNI_PLUGIN_VERSION="v0.8.5"
 export KUBERNETES_VERSION="1.16.8"
 
+export DKR_INSECURE="${DKR_INSECURE:-null}"
 export PATH="/usr/local/bin:$PATH"
 
 MACHINE=$(uname -m)

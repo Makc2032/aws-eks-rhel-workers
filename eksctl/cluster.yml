@@ -2,57 +2,63 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: test-cluster
+  name: infra-test
   region: us-east-1
 
 nodeGroups:
-  - name: rhel-worker-node
-    ami: ami-1234567890abcdef1
-    minSize: 2
+  - name: rhel-worker-node-candidate
+    ami: ami-053a35517d4519c72
+    minSize: 1
     desiredCapacity: 3
-    maxSize: 4
+    maxSize: 6
     privateNetworking: true
     availabilityZones: ["us-east-1a", "us-east-1b", "us-east-1c"]
     volumeSize: 20
-    preBootstrapCommands:
-      # run shell scripts on instances as they are created
-      - "echo 'enter any command in YAML list format'"
-      - "systemctl restart docker"
+    # preBootstrapCommands:
+      # allow docker registries to be deployed as cluster service
+      # - 'echo "10.17.24.57 svl-artfct-p1.carefirst.com  svl-artfct-p1" >> /etc/hosts'
+      # - "systemctl restart docker"
     ssh: # use existing EC2 key but don't allow SSH access to nodegroup.
-      publicKeyName: nonprod
-      allow: false
+      publicKeyName: non-prod
+      # allow: false
       # new feature for restricting SSH access to certain AWS security group IDs
-      sourceSecurityGroupIds: ["sg-1234567890abcdef1"]
-      labels: {role: worker}
+      # sourceSecurityGroupIds: ["sg-008a114ec9b10fe90"]
+    labels: {
+      role: worker,
+      environment: infra-test,
+      nodegroup: rhel-worker-node
+    }
     tags:
       nodegroup-role: worker
       Name: "rhel-worker-node"
-      Owner: "Someone's Name"
-      Environment: "someenv"
-      CostCenter: "Company Dept"
+      Owner: "Ginger.Mann@carefirst.com"
+      Environment: "nonprod"
+      CostCenter: "Nexus - 004PH"
       Function: "eks-cluster"
       DataClass: "private"
       DataAccess: "Admin"
       ManagedBy: "cloudformation"
       k8s.io/cluster-autoscaler/enabled: "true"
       k8s.io/cluster-autoscaler/cluster-13: "owned"
-    iam:
-      attachPolicyARNs:
-      - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
-      - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
-      - arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess
-      - arn:aws:iam::aws:policy/CloudWatchFullAccess
-      - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
-      - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
-      - arn:aws:iam::aws:policy/AmazonSSMAutomationApproverAccess
-      - arn:aws:iam::aws:policy/service-role/AmazonSSMAutomationRole
-      withAddonPolicies:
-        externalDNS: true
-        certManager: true
-        albIngress: true
-cloudWatch:
-    clusterLogging:
-        # enable specific types of cluster control plane logs
-        enableTypes: ["all"]
-        # all supported types: "api", "audit", "authenticator", "controllerManager", "scheduler"
-        # supported special values: "*" and "all"
+      iam:
+        attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess
+        - arn:aws:iam::aws:policy/CloudWatchFullAccess
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
+        - arn:aws:iam::aws:policy/AmazonSSMAutomationApproverAccess
+        - arn:aws:iam::aws:policy/service-role/AmazonSSMAutomationRole
+        withAddonPolicies:
+          externalDNS: true
+          certManager: true
+          albIngress: true
+  
+  cloudWatch:
+      clusterLogging:
+          # enable specific types of cluster control plane logs
+          enableTypes: ["all"]
+          # all supported types: "api", "audit", "authenticator", "controllerManager", "scheduler"
+          # supported special values: "*" and "all"
+  

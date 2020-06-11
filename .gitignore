@@ -1,0 +1,12 @@
+*.tgz
+credentials
+*_credentials
+.DS_Store
+*.pem
+*.pub
+kubeconfig_*
+config-map-aws-auth-*
+.vscode
+admin_config_*
+setup_config_*
+k8s-objects/test_poc_kubeconfig

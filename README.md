@@ -12,7 +12,7 @@ Supports the following features:
 
 ## Setup
 * Red Hat Enterprise Linux 7.7
-<img src="./images/aws-rhel.png"/>
+![Example AMI](./images/aws-rhel.png "Red Hat Enterprise Linux 7.7")
  
 * Kubernetes 1.16.8 on AWS EKS
 * Based on public AMI: RHEL-7.7_HVM-20190923-x86_64-0-Hourly2-GP2 - ami-029c0fbe456d58bd1

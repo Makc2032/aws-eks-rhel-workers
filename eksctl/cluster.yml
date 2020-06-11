@@ -55,10 +55,10 @@ nodeGroups:
           certManager: true
           albIngress: true
   
-  cloudWatch:
-      clusterLogging:
-          # enable specific types of cluster control plane logs
-          enableTypes: ["all"]
-          # all supported types: "api", "audit", "authenticator", "controllerManager", "scheduler"
-          # supported special values: "*" and "all"
+cloudWatch:
+    clusterLogging:
+        # enable specific types of cluster control plane logs
+        enableTypes: ["all"]
+        # all supported types: "api", "audit", "authenticator", "controllerManager", "scheduler"
+        # supported special values: "*" and "all"
   

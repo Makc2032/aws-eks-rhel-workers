@@ -12,8 +12,8 @@ export BINARY_BUCKET_REGION="us-west-2"
 export AWS_ACCESS_KEY_ID=""
 export KUBERNETES_BUILD_DATE="2020-04-16"
 export CNI_VERSION="v0.6.0"
-export CNI_PLUGIN_VERSION="v0.8.5"
-export KUBERNETES_VERSION="1.16.8"
+export CNI_PLUGIN_VERSION="v0.8.7"
+export KUBERNETES_VERSION="1.14.9" #1.16.8
 
 export DKR_INSECURE="${DKR_INSECURE:-null}"
 export PATH="/usr/local/bin:$PATH"
@@ -227,3 +227,10 @@ sudo yum clean all
 sudo rm -rf /var/cache/yum
 
 sudo touch /etc/machine-id
+sudo yum install jq -y
+cat > /etc/sysctl.d/90-kubelet.conf << EOF
+vm.overcommit_memory=1
+kernel.panic=10
+kernel.panic_on_oops=1
+EOF
+sysctl -p /etc/sysctl.d/90-kubelet.conf
